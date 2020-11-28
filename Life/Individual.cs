@@ -11,7 +11,7 @@ namespace Life
         /// <summary>
         /// Presumably the choices made by the player?
         /// </summary>
-        public IEnumerable<int> Chromosomes { get; protected set; }
+        public List<Choice> Chromosomes { get; protected set; }
         /// <summary>
         /// The fitness score function of the GA.
         /// </summary>

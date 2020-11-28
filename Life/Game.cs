@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,9 +21,21 @@ namespace Life
         /// </summary>
         public double Health { get; private set; }
         /// <summary>
+        /// The amount of money the player has.
+        /// </summary>
+        public int Money { get; private set; }
+        /// <summary>
         /// The amount of the player's life enjoyment. You want to optimize this.
         /// </summary>
         public double LifeEnjoyment { get; private set; }
+        /// <summary>
+        /// Represents the choices made by the player.
+        /// </summary>
+        public List<Choice> Choices { get; private set; }
+        /// <summary>
+        /// The maximum number of periods in the game.
+        /// </summary>
+        private readonly uint MaxPeriods;
         /// <summary>
         /// The constant <i>k</i>, which affects health regeneration.
         /// </summary>
@@ -44,11 +57,11 @@ namespace Life
         /// </summary>
         private readonly double a;
         /// <summary>
-        /// The harvesting field, represented as a multidimensional array.
+        /// The harvesting field, represented as a table.
         /// You get <i>v</i> points of life enjoyment for a successful harvest,
         /// at one of the <i>t</i> points scattered across the field.
         /// </summary>
-        public bool[,] Field { get; private set; }
+        private readonly DataTable Field;
         /// <summary>
         /// Constructs a new game with the default parameters. You can override these.
         /// </summary>
@@ -62,16 +75,26 @@ namespace Life
         /// <param name="k">Affects health regen.</param>
         /// <param name="c">Affects life enjoyment.</param>
         /// <param name="a">Affects life enjoyment.</param>
-        public Game(uint periods = 10, float defaultHealth = 70, int m = 10, int n = 10, int t = 100, int v = 1, double g = 1, double k = 0.01021, double c = 464.53, double a = 32)
+        public Game(uint periods = 10, float defaultHealth = 70, int m = 10, int n = 10, int t = 100, int v = 1, double g = 1, double k = 0.01021, double c = 464.53, double a = 32, List<Choice> choices = null)
         {
             Health = defaultHealth;
-            Period = periods;
+            MaxPeriods = periods;
+            Period = 0;
             this.k = k;
             this.g = g;
             this.v = v;
             this.c = c;
             this.a = a;
-            Field = new bool[m, n];
+            this.Choices = choices;
+            Field = new DataTable();
+            for (int i = 0; i < n; i++)
+            {
+                Field.Columns.Add(new DataColumn(i.ToString(), typeof(bool)));
+            }
+            for (int i = 0; i < m; i++)
+            {
+                Field.Rows.Add(Field.NewRow());
+            }
             Random random = new Random();
             for (int i = 0; i < m; i++)
             {
@@ -79,9 +102,10 @@ namespace Life
                 {
                     if (t > 0 && random.Next(0, 2) == 1)
                     {
-                        Field[i, j] = true;
+                        Field.Rows[i][j] = true;
                         t--;
                     }
+                    else { Field.Rows[i][j] = false; }
                 }
             }
         }
@@ -90,6 +114,34 @@ namespace Life
         /// </summary>
         /// <param name="I">The health investment.</param>
         /// <param name="H">The health after harvesting.</param>
-        private void HealthRegen(double I, double H) => Health += 100 * (Math.Pow(Math.E, k * I) / (Math.Pow(Math.E, k * I) + ((100 - H) / H))) - H;
+        private void RegenHealth(double I) => Health += 100 * (Math.Pow(Math.E, k * I) / (Math.Pow(Math.E, k * I) + ((100 - Health) / Health))) - Health;
+        /// <summary>
+        /// Decrement health at the start of each turn.
+        /// </summary>
+        private void DecrementHealth() => Health -= 10 + Period;
+        /// <summary>
+        /// Harvest the field.
+        /// </summary>
+        /// <remarks>
+        /// There is no good reason to subject this to RNG as you would never not harvest to the maximum extent.
+        /// </remarks>
+        private void Harvest()
+        {
+            int maxHarvest = (int)(((float)Field.Columns.Count) * (1 - (g * (100 - Health) / 100)));
+            Random random = new Random();
+            int row = random.Next(0, Field.Rows.Count + 1);
+        }
+    }
+
+    /// <summary>
+    /// Represents the amounts invested into life and health investments at each turn.
+    /// </summary>
+    /// <remarks>
+    /// A collection of these choices forms the chromosomes.
+    /// </remarks>
+    public class Choice
+    {
+        public uint LifeInvestment;
+        public uint HealthInvestment;
     }
 }
