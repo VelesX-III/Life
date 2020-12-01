@@ -57,11 +57,13 @@ namespace Life
         /// </summary>
         private readonly double a;
         /// <summary>
-        /// The harvesting field, represented as a table.
-        /// You get <i>v</i> points of life enjoyment for a successful harvest,
-        /// at one of the <i>t</i> points scattered across the field.
+        /// The dimensions of the field.
         /// </summary>
-        private readonly DataTable Field;
+        private readonly uint m, n;
+        /// <summary>
+        /// The number of successful harvesting points over the field.
+        /// </summary>
+        private readonly uint t;
         /// <summary>
         /// Constructs a new game with the default parameters. You can override these.
         /// </summary>
@@ -75,7 +77,7 @@ namespace Life
         /// <param name="k">Affects health regen.</param>
         /// <param name="c">Affects life enjoyment.</param>
         /// <param name="a">Affects life enjoyment.</param>
-        public Game(uint periods = 10, float defaultHealth = 70, int m = 10, int n = 10, int t = 100, int v = 1, double g = 1, double k = 0.01021, double c = 464.53, double a = 32, List<Choice> choices = null)
+        public Game(uint periods = 10, float defaultHealth = 70, uint m = 10, uint n = 10, uint t = 100, int v = 1, double g = 1, double k = 0.01021, double c = 464.53, double a = 32, List<Choice> choices = null)
         {
             Health = defaultHealth;
             MaxPeriods = periods;
@@ -86,7 +88,27 @@ namespace Life
             this.c = c;
             this.a = a;
             this.Choices = choices;
-            Field = new DataTable();
+        }
+        /// <summary>
+        /// Regenerates health.
+        /// </summary>
+        /// <param name="I">The health investment.</param>
+        /// <param name="H">The health after harvesting.</param>
+        private void RegenHealth(double I) => Health += 100 * (Math.Pow(Math.E, k * I) / (Math.Pow(Math.E, k * I) + ((100 - Health) / Health))) - Health;
+        /// <summary>
+        /// Decrement health at the start of each turn.
+        /// </summary>
+        private void DecrementHealth() => Health -= 10 + Period;
+        /// <summary>
+        /// Harvest the field.
+        /// </summary>
+        /// <returns>
+        /// An integer representing currency gleaned.
+        /// </returns>
+        private int Harvest()
+        {
+            uint t = this.t;
+            DataTable Field = new DataTable();
             for (int i = 0; i < n; i++)
             {
                 Field.Columns.Add(new DataColumn(i.ToString(), typeof(bool)));
@@ -108,28 +130,18 @@ namespace Life
                     else { Field.Rows[i][j] = false; }
                 }
             }
-        }
-        /// <summary>
-        /// Regenerates health.
-        /// </summary>
-        /// <param name="I">The health investment.</param>
-        /// <param name="H">The health after harvesting.</param>
-        private void RegenHealth(double I) => Health += 100 * (Math.Pow(Math.E, k * I) / (Math.Pow(Math.E, k * I) + ((100 - Health) / Health))) - Health;
-        /// <summary>
-        /// Decrement health at the start of each turn.
-        /// </summary>
-        private void DecrementHealth() => Health -= 10 + Period;
-        /// <summary>
-        /// Harvest the field.
-        /// </summary>
-        /// <remarks>
-        /// There is no good reason to subject this to RNG as you would never not harvest to the maximum extent.
-        /// </remarks>
-        private void Harvest()
-        {
-            int maxHarvest = (int)(((float)Field.Columns.Count) * (1 - (g * (100 - Health) / 100)));
-            Random random = new Random();
-            int row = random.Next(0, Field.Rows.Count + 1);
+
+            int harvestRows = (int)(((float)Field.Columns.Count) * (1 - (g * (100 - Health) / 100)));
+            int harvestTotal = 0;
+            for (int i = 0; i < (harvestRows < Field.Rows.Count ? harvestRows : Field.Rows.Count); i++)
+            {
+                for (int j = 0; j < Field.Columns.Count; j++)
+                {
+                    harvestTotal += (bool)Field.Rows[i][j] == true ? v : 0;
+                }
+            }
+
+            return harvestTotal;
         }
     }
 
