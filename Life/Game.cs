@@ -45,7 +45,7 @@ namespace Life
         /// </summary>
         private readonly uint MaxPeriods;
         /// <summary>
-        /// The random number generator to use throughout the game.
+        /// The random number generator to use throughout the all instances of the game.
         /// </summary>
         private static readonly Random random;
         /// <summary>
@@ -96,6 +96,7 @@ namespace Life
         /// <param name="k">Affects health regen.</param>
         /// <param name="c">Affects life enjoyment.</param>
         /// <param name="a">Affects life enjoyment.</param>
+        /// <param name="choices">A list containing the choices to make in each turn.</param>
         public Game(
             uint periods = 10,
             float defaultHealth = 70,
@@ -119,7 +120,8 @@ namespace Life
             this.m = m;
             this.n = n;
             this.t = t;
-            this.Choices = choices;
+            if ((choices is null) || choices?.Count == MaxPeriods) { Choices = choices; }
+            else { throw new Exception("The number of choices doesn't match the number of turns."); }
         }
         /// <summary>
         /// Harvest the field.
@@ -184,7 +186,7 @@ namespace Life
         /// <returns>The amount of life enjoyment accrued.</returns>
         public Game Play()
         {
-            if (Period < MaxPeriods)
+            if (Period == 0)
             {
                 if (Choices is null)
                 {
@@ -228,7 +230,7 @@ namespace Life
     /// <remarks>
     /// A collection of these choices forms the chromosomes.
     /// </remarks>
-    public struct Choice
+    public class Choice
     {
         /// <summary>
         /// The ratio of money invested to money owned.
