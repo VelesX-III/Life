@@ -15,15 +15,23 @@ namespace Life
         /// <summary>
         /// The current period of the game.
         /// </summary>
-        public uint Period { get; private set; }
+        public int Period { get; private set; }
         /// <summary>
         /// The player's current amount of health.
         /// </summary>
-        public double Health { get; private set; }
+        public double Health { get => _Health; private set => _Health = value > 0 && _Health > 0 ? value : 0; }
+        /// <summary>
+        /// Backing for Health.
+        /// </summary>
+        private double _Health = 1;
         /// <summary>
         /// The amount of money the player has.
         /// </summary>
-        public int Money { get; private set; }
+        public double Money { get => _Money; private set => _Money = value < 0 ? 0 : value; }
+        /// <summary>
+        /// Backing for Money.
+        /// </summary>
+        private double _Money = 0;
         /// <summary>
         /// The amount of the player's life enjoyment. You want to optimize this.
         /// </summary>
@@ -37,6 +45,10 @@ namespace Life
         /// </summary>
         private readonly uint MaxPeriods;
         /// <summary>
+        /// The random number generator to use throughout the game.
+        /// </summary>
+        private static readonly Random random;
+        /// <summary>
         /// The constant <i>k</i>, which affects health regeneration.
         /// </summary>
         private readonly double k;
@@ -47,7 +59,7 @@ namespace Life
         /// <summary>
         /// The constant <i>v</i>, which is the value of a successful harvesting attempt.
         /// </summary>
-        private readonly int v;
+        private readonly double v;
         /// <summary>
         /// The constant <i>c</i>, which affects life enjoyment.
         /// </summary>
@@ -65,6 +77,13 @@ namespace Life
         /// </summary>
         private readonly uint t;
         /// <summary>
+        /// Static constructor to make sure that all instances share the same RNG seed.
+        /// </summary>
+        static Game()
+        {
+            random = new Random();
+        }
+        /// <summary>
         /// Constructs a new game with the default parameters. You can override these.
         /// </summary>
         /// <param name="periods">Number of periods to begin the game with.</param>
@@ -77,37 +96,36 @@ namespace Life
         /// <param name="k">Affects health regen.</param>
         /// <param name="c">Affects life enjoyment.</param>
         /// <param name="a">Affects life enjoyment.</param>
-        public Game(uint periods = 10, float defaultHealth = 70, uint m = 10, uint n = 10, uint t = 100, int v = 1, double g = 1, double k = 0.01021, double c = 464.53, double a = 32, List<Choice> choices = null)
+        public Game(
+            uint periods = 10,
+            float defaultHealth = 70,
+            uint m = 10,
+            uint n = 10,
+            uint t = 100,
+            int v = 1,
+            double g = 1,
+            double k = 0.01021,
+            double c = 464.53,
+            double a = 32,
+            List<Choice> choices = null)
         {
             Health = defaultHealth;
             MaxPeriods = periods;
-            Period = 0;
             this.k = k;
             this.g = g;
             this.v = v;
             this.c = c;
             this.a = a;
+            this.m = m;
+            this.n = n;
+            this.t = t;
             this.Choices = choices;
         }
         /// <summary>
-        /// Regenerates health.
-        /// </summary>
-        /// <param name="I">The health investment.</param>
-        /// <param name="H">The health after harvesting.</param>
-        private void RegenHealth(double I) => Health += 100 * (Math.Pow(Math.E, k * I) / (Math.Pow(Math.E, k * I) + ((100 - Health) / Health))) - Health;
-        /// <summary>
-        /// Decrement health at the start of each turn.
-        /// </summary>
-        private void DecrementHealth() => Health -= 10 + Period;
-        /// <summary>
         /// Harvest the field.
         /// </summary>
-        /// <returns>
-        /// An integer representing currency gleaned.
-        /// </returns>
-        private int Harvest()
+        private void Harvest()
         {
-            uint t = this.t;
             DataTable Field = new DataTable();
             for (int i = 0; i < n; i++)
             {
@@ -117,22 +135,20 @@ namespace Life
             {
                 Field.Rows.Add(Field.NewRow());
             }
-            Random random = new Random();
             for (int i = 0; i < m; i++)
             {
                 for (int j = 0; j < n; j++)
                 {
-                    if (t > 0 && random.Next(0, 2) == 1)
+                    if (random.NextDouble() <= ((double)t) / (((double)m) * ((double)n)))
                     {
                         Field.Rows[i][j] = true;
-                        t--;
                     }
                     else { Field.Rows[i][j] = false; }
                 }
             }
 
             int harvestRows = (int)(((float)Field.Columns.Count) * (1 - (g * (100 - Health) / 100)));
-            int harvestTotal = 0;
+            double harvestTotal = 0;
             for (int i = 0; i < (harvestRows < Field.Rows.Count ? harvestRows : Field.Rows.Count); i++)
             {
                 for (int j = 0; j < Field.Columns.Count; j++)
@@ -141,7 +157,68 @@ namespace Life
                 }
             }
 
-            return harvestTotal;
+            Money += harvestTotal;
+            Health -= 10 + Period;
+        }
+        /// <summary>
+        /// Regenerates health.
+        /// </summary>
+        /// <param name="I">The health investment.</param>
+        private void RegenHealth(double I)
+        {
+            Health += Math.Floor(100 * (Math.Pow(Math.E, k * I) / (Math.Pow(Math.E, k * I) + ((100 - Health) / Health))) - Health);
+            Money -= I;
+        }
+        /// <summary>
+        /// Generate life enjoyment.
+        /// </summary>
+        /// <param name="L">The life enjoyment investment.</param>
+        private void GenerateLifeEnjoyment(double L)
+        {
+            LifeEnjoyment += Health > 0 ? c * (Health / 100) * (L / (L + a)) : 0;
+            Money -= L;
+        }
+        /// <summary>
+        /// Play the current instance of the game.
+        /// </summary>
+        /// <returns>The amount of life enjoyment accrued.</returns>
+        public Game Play()
+        {
+            if (Period < MaxPeriods)
+            {
+                if (Choices is null)
+                {
+                    Choices = new List<Choice>();
+                    for (Period = 0; Period < MaxPeriods; Period++)
+                    {
+                        Harvest();
+                        double spendingMoney = random.NextDouble() * Money;
+                        double healthInvestment = random.NextDouble() * spendingMoney;
+                        Choices.Add(new Choice
+                        {
+                            MoneySpent = spendingMoney / Money,
+                            HealthInvestment = healthInvestment / spendingMoney,
+                            LifeInvestment = (spendingMoney - healthInvestment) / spendingMoney
+                        });
+                        RegenHealth(healthInvestment);
+                        GenerateLifeEnjoyment(spendingMoney - healthInvestment);
+                    }
+                }
+                else
+                {
+                    for (Period = 0; Period < MaxPeriods; Period++)
+                    {
+                        Harvest();
+                        double spendingMoney = Choices[Period].MoneySpent * Money;
+                        double healthInvestment = Choices[Period].HealthInvestment * spendingMoney;
+                        double lifeInvestment = Choices[Period].LifeInvestment * spendingMoney;
+                        RegenHealth(healthInvestment);
+                        GenerateLifeEnjoyment(lifeInvestment);
+                    }
+                }
+            }
+
+            return this;
         }
     }
 
@@ -151,9 +228,19 @@ namespace Life
     /// <remarks>
     /// A collection of these choices forms the chromosomes.
     /// </remarks>
-    public class Choice
+    public struct Choice
     {
-        public uint LifeInvestment;
-        public uint HealthInvestment;
+        /// <summary>
+        /// The ratio of money invested to money owned.
+        /// </summary>
+        public double MoneySpent;
+        /// <summary>
+        /// The ratio of money spent on life enjoyment of money spent;
+        /// </summary>
+        public double LifeInvestment;
+        /// <summary>
+        /// The ratio of money spent on health improvement of money spent.
+        /// </summary>
+        public double HealthInvestment;
     }
 }

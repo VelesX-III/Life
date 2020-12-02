@@ -10,7 +10,14 @@ namespace Life
     {
         static void Main(string[] args)
         {
-            Game g = new Game();
+            List<Game> Individuals = new List<Game>();
+            for (int i = 0; i < 100; i++)
+            {
+                Individuals.Add(new Game().Play());
+            }
+
+            Individuals.ForEach(g => Console.WriteLine(g.LifeEnjoyment));
+            Console.ReadLine();
         }
     }
 }
