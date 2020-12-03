@@ -29,10 +29,10 @@ namespace Life
                 {
                     //Create children from two parents.
                     List<Choice>[] childChoices = { new List<Choice>(), new List<Choice>() };
-                    childChoices[0].AddRange(individuals[j].Choices.GetRange(0, 5));
-                    childChoices[0].AddRange(individuals[j + 1].Choices.GetRange(5, 5));
-                    childChoices[1].AddRange(individuals[j].Choices.GetRange(5, 5));
-                    childChoices[1].AddRange(individuals[j + 1].Choices.GetRange(0, 5));
+                    childChoices[0].AddRange(individuals[j].Choices.GetRange(0, 4));
+                    childChoices[0].AddRange(individuals[j + 1].Choices.GetRange(4, 4));
+                    childChoices[1].AddRange(individuals[j].Choices.GetRange(4, 4));
+                    childChoices[1].AddRange(individuals[j + 1].Choices.GetRange(0, 4));
                     //Roll for mutation.
                     if (random.NextDouble() < mutationRate)
                     {

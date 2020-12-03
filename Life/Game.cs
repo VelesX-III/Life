@@ -98,16 +98,16 @@ namespace Life
         /// <param name="a">Affects life enjoyment.</param>
         /// <param name="choices">A list containing the choices to make in each turn.</param>
         public Game(
-            uint periods = 10,
-            float defaultHealth = 70,
+            uint periods = 8,
+            float defaultHealth = 60,
             uint m = 10,
             uint n = 10,
-            uint t = 100,
-            int v = 1,
+            uint t = 10,
+            int v = 3,
             double g = 1,
-            double k = 0.01021,
-            double c = 464.53,
-            double a = 32,
+            double k = .007,
+            double c = 700,
+            double a = 45,
             List<Choice> choices = null)
         {
             Health = defaultHealth;
@@ -160,7 +160,7 @@ namespace Life
             }
 
             Money += harvestTotal;
-            Health -= 10 + Period;
+            Health -= 15 + 4 * Period;
         }
         /// <summary>
         /// Regenerates health.
