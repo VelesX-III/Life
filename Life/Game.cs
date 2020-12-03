@@ -102,7 +102,7 @@ namespace Life
             float defaultHealth = 70,
             uint m = 10,
             uint n = 10,
-            uint t = 100,
+            uint t = 10,
             int v = 1,
             double g = 1,
             double k = 0.01021,
